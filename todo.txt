@@ -1,0 +1,5 @@
+calculate real deltatime
+space music
+air resistance
+bigger earth/planet
+add moon

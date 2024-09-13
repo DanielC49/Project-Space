@@ -1,0 +1,211 @@
+<head>
+  <title>Project: Space – pre-alpha 4</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+  <script src="controls.js"></script>
+  <script src="physics.js"></script>
+  <script src="renderer.js"></script>
+  <script src="sas.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/smokejs/3.1.1/js/smoke.min.js"></script>
+  <meta name='viewport'  content='width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0'/>
+</head>
+
+<style>
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    margin: 0;
+    -webkit-touch-callout: none; /* iOS Safari */
+    -webkit-user-select: none; /* Safari */
+    -khtml-user-select: none; /* Konqueror HTML */
+    -moz-user-select: none; /* Old versions of Firefox */
+    -ms-user-select: none; /* Internet Explorer/Edge */
+    user-select: none;
+  }
+
+  button{
+  	font-size: 80px;
+  	padding: 20px;
+  }
+  #canvas {
+
+  }
+
+  #game-wrapper {
+    background-color: black;
+    position: relative;
+  }
+
+  #thrust-slider {
+    width: 20px;
+    height: 200px;
+    position: absolute;
+    left: 10px;
+    bottom: 30px;
+    background-color: rgb(100, 100, 100);
+  }
+
+  #thrust-slider-handle {
+    width: 20px;
+    height: 30px;
+    background-color: rgb(140, 140, 140);
+    position: absolute;
+    left: 0px;
+    bottom: 0px;
+  }
+
+  #thrust-slider-value {
+    width: 50px;
+    height: 20px;
+    background-color: grey;
+    position: absolute;
+    left: 10px;
+    bottom: 10px;
+  }
+
+  #steer-slider {
+    width: 200px;
+    height: 20px;
+    position: absolute;
+    left: 60px;
+    bottom: 10px;
+    background-color: rgb(100, 100, 100);
+  }
+
+  #steer-slider-handle {
+    width: 30px;
+    height: 20px;
+    background-color: rgb(140, 140, 140);
+    position: absolute;
+    left: 85px;
+  }
+
+  #steer-slider-value {
+    width: 50px;
+    height: 20px;
+    background-color: grey;
+    position: absolute;
+    left: 260px;
+    bottom: 10px;
+  }
+
+  #panel-info {
+    width: 280px;
+    height: 80px;
+    position: absolute;
+    left: 30px;
+    bottom: 30px;
+    background-color: rgb(150, 150, 150);
+  }
+
+  #zoom-slider {
+    width: 20px;
+    height: 200px;
+    position: absolute;
+    right: 10px;
+    bottom: 30px;
+    background-color: rgb(100, 100, 100);
+  }
+
+  #zoom-slider-handle {
+    width: 20px;
+    height: 30px;
+    background-color: rgb(140, 140, 140);
+    position: absolute;
+    top: 85px;
+  }
+
+  #zoom-slider-value {
+    width: 50px;
+    height: 20px;
+    background-color: grey;
+    position: absolute;
+    right: 10px;
+    bottom: 10px;
+    text-align: right;
+  }
+
+</style>
+
+<body>
+  <div id="game-wrapper">
+    <canvas id="canvas" width="1000px" height="600px"></canvas>
+
+    <div id="thrust-slider">
+      <div id="thrust-slider-handle"></div>
+    </div>
+    <div id="thrust-slider-value">0 %</div>
+
+    <div id="steer-slider">
+      <div id="steer-slider-handle"></div>
+    </div>
+    <div id="steer-slider-value">0</div>
+
+    <div id="panel-info">
+      <div class="">
+        Velocity: 0 m/s
+      </div>
+    </div>
+
+    <div id="zoom-slider">
+      <div id="zoom-slider-handle"></div>
+    </div>
+    <div id="zoom-slider-value">100 %</div>
+
+    <!--<input id="thrust-slider" type="range" orient="vertical" value=0>-->
+    <!--<input id="steering-slider" type="range" orient="horizontal" min=0 max=20 value=10>
+
+    <span id="thrust">0%</span>
+
+    <input id="zoom-slider" type="range" min=1 max=20000 orient="vertical" value=10000>
+
+    <br>
+
+    <input id="sas" type="checkbox">
+    <label for="sas">SAS</label>-->
+  </div>
+
+  <span id="title">Project: Space</span>
+
+  <audio id="rocket_engine_sfx">
+    <source src="https://raw.githubusercontent.com/PPTGames/Project-Space/master/rocket_boost_engine.mp3" type="audio/mp3">
+  </audio>
+
+  <audio id="bgm_space">
+    <source src="https://raw.githubusercontent.com/PPTGames/Project-Space/master/%F0%9F%8E%B5%20Orbital%20Romance%20-%20Sir%20Cubworth%20%F0%9F%8E%A7%20No%20Copyright%20Music%20%F0%9F%8E%B6%20YouTube%20Audio%20Library.mp3" type="audio/mp3">
+  </audio>
+
+
+  <script>
+    $(document).ready(function() {
+      let ctx = $("#canvas").get(0).getContext("2d");
+      let w = window.innerWidth;
+      let h = window.innerHeight;
+      let r = w / h;
+      if (r > 16 / 9) w = h * 16 / 9;
+      if (r < 16 / 9) h = w * 9 / 16;
+      $("#game-wrapper").width(w);
+      $("#game-wrapper").height(h);
+      ctx.canvas.width = w;
+      ctx.canvas.height = h;
+      cw = w;
+      ch = h;
+
+      genStars();
+
+      let lastUpdate = Date.now();
+      let myInterval = setInterval(tick, 0);
+
+      function tick() {
+        var now = Date.now();
+        var dt = now - lastUpdate;
+        lastUpdate = now;
+
+        refreshPhysics(dt / 1000);
+        refreshViewport(dt / 1000);
+      }
+    });
+  </script>
+
+</body>
